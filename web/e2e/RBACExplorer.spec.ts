@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * RBACExplorer Card E2E Tests
@@ -23,6 +24,9 @@ import { test, expect, Page } from '@playwright/test'
 // ---------------------------------------------------------------------------
 
 async function setupDemoMode(page: Page) {
+  // Register catch-all FIRST so specific mocks override it
+  await mockApiFallback(page)
+
   await page.route('**/api/me', (route) =>
     route.fulfill({
       status: 200,
@@ -45,8 +49,7 @@ async function setupDemoMode(page: Page) {
     })
   )
 
-  await page.goto('/login')
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
@@ -59,6 +62,9 @@ async function setupDemoMode(page: Page) {
 }
 
 async function setupLiveMode(page: Page, withClusters = false) {
+  // Register catch-all FIRST so specific mocks override it
+  await mockApiFallback(page)
+
   await page.route('**/api/me', (route) =>
     route.fulfill({
       status: 200,
@@ -94,8 +100,7 @@ async function setupLiveMode(page: Page, withClusters = false) {
     })
   )
 
-  await page.goto('/login')
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.removeItem('kc-demo-mode')
     localStorage.setItem('demo-user-onboarded', 'true')
@@ -107,7 +112,7 @@ async function setupLiveMode(page: Page, withClusters = false) {
 }
 
 /** Navigate to the dashboard and wait for the RBACExplorer card to appear */
-async function gotoRBACCard(page: Page) {
+async function _gotoRBACCard(page: Page) {
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')
   // The card title text identifies the card within the dashboard
@@ -115,6 +120,13 @@ async function gotoRBACCard(page: Page) {
     hasText: /rbac|role|binding|finding/i,
   }).first()
   return card
+}
+
+/** Wait for demo findings to render inside the RBAC card. This is the
+ *  canonical signal that the card has loaded demo data — several tests
+ *  previously failed because they only waited for `domcontentloaded`. */
+async function waitForRBACDemoFindings(page: Page) {
+  await expect(page.getByText('dev-team').first()).toBeVisible({ timeout: 15000 })
 }
 
 // ---------------------------------------------------------------------------
@@ -127,9 +139,11 @@ test.describe('RBACExplorer card — demo mode', () => {
   })
 
   test('renders demo findings with risk chips', async ({ page }) => {
-    await gotoRBACCard(page)
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
+
+    // Wait for demo findings to fully render
+    await waitForRBACDemoFindings(page)
 
     // Wait for at least one risk chip to appear
     const criticalChip = page.getByRole('button', { name: /critical/i }).first()
@@ -144,6 +158,9 @@ test.describe('RBACExplorer card — demo mode', () => {
   test('risk filter chip filters findings', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
+
+    // Wait for demo findings to render
+    await waitForRBACDemoFindings(page)
 
     // Wait for critical chip
     const criticalChip = page.getByRole('button', { name: /critical/i }).first()
@@ -166,8 +183,8 @@ test.describe('RBACExplorer card — demo mode', () => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
 
-    // Wait for a finding to appear
-    await expect(page.getByText('dev-team').first()).toBeVisible({ timeout: 10000 })
+    // Wait for demo findings to render
+    await waitForRBACDemoFindings(page)
 
     // Find the search input and type a query
     const searchInput = page.getByPlaceholder(/search subjects/i)
@@ -182,7 +199,8 @@ test.describe('RBACExplorer card — demo mode', () => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
 
-    await expect(page.getByText('dev-team').first()).toBeVisible({ timeout: 10000 })
+    // Wait for demo findings to render
+    await waitForRBACDemoFindings(page)
 
     const searchInput = page.getByPlaceholder(/search subjects/i)
     await searchInput.fill('prod-eu-west')
@@ -205,9 +223,8 @@ test.describe('RBACExplorer card — demo mode', () => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
 
-    // Each demo finding is a row with a subject name, a binding reference,
-    // and a cluster badge. Verify a canonical row renders all three.
-    await expect(page.getByText('dev-team').first()).toBeVisible({ timeout: 10000 })
+    // Wait for demo findings to render
+    await waitForRBACDemoFindings(page)
     await expect(page.getByText(/ClusterRoleBinding\/dev-admin/i).first()).toBeVisible()
     await expect(page.getByText('prod-us-east').first()).toBeVisible()
   })
@@ -229,7 +246,8 @@ test.describe('RBACExplorer card — demo mode', () => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
 
-    await expect(page.getByText('dev-team').first()).toBeVisible({ timeout: 10000 })
+    // Wait for demo findings to render
+    await waitForRBACDemoFindings(page)
 
     const searchInput = page.getByPlaceholder(/search subjects/i)
     await searchInput.fill('ci-bot')

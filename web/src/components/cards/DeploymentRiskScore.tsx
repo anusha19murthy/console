@@ -6,10 +6,9 @@
  *
  * Higher score = higher risk.
  *
- * Issue: https://github.com/kubestellar/console/issues/9827
- *
- * TODO(#9827): Add Istio error-rate and OPA Gatekeeper constraint weights when
- * hooks for those sources land (useCachedIstio / useCachedOPA).
+ * Future enhancement: add Istio error-rate and OPA Gatekeeper constraint
+ * weights when hooks for those sources land (useCachedIstio / useCachedOPA).
+ * When added, redistribute scoring weights so the total still equals 1.0.
  */
 
 import { useMemo } from 'react'
@@ -22,8 +21,6 @@ import { useCardLoadingState } from './CardDataContext'
 import { CardSkeleton, CardEmptyState } from '../../lib/cards/CardComponents'
 
 // ── Scoring weights (sum = 1.0) ─────────────────────────────────────────────
-// When Istio/OPA hooks arrive, redistribute weights and renormalize so the
-// total still equals 1.0.
 const ARGO_WEIGHT = 0.35
 const KYVERNO_WEIGHT = 0.25
 const POD_RESTART_WEIGHT = 0.40
@@ -242,7 +239,7 @@ export function DeploymentRiskScore() {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-3">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground">
         <span>{t('deploymentRiskScore.legend')}</span>
         <span className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1">
