@@ -441,10 +441,20 @@ func (s *Server) handleAutoUpdateConfig(w http.ResponseWriter, r *http.Request) 
 
 		// Persist to settings
 		mgr := settings.GetSettingsManager()
-		if all, err := mgr.GetAll(); err == nil {
-			all.AutoUpdateEnabled = req.Enabled
-			all.AutoUpdateChannel = req.Channel
-			mgr.SaveAll(all)
+		all, err := mgr.GetAll()
+		if err != nil {
+			slog.Error("failed to read settings for auto-update config", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			writeJSON(w, map[string]string{"error": "failed to read settings"})
+			return
+		}
+		all.AutoUpdateEnabled = req.Enabled
+		all.AutoUpdateChannel = req.Channel
+		if err := mgr.SaveAll(all); err != nil {
+			slog.Error("failed to save auto-update config", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			writeJSON(w, map[string]string{"error": "failed to save settings"})
+			return
 		}
 
 		// Apply to running checker
