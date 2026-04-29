@@ -377,6 +377,7 @@ func (s *SQLiteStore) migrate() error {
 		title TEXT NOT NULL,
 		description TEXT NOT NULL,
 		request_type TEXT NOT NULL,
+		target_repo TEXT NOT NULL DEFAULT 'console',
 		github_issue_number INTEGER,
 		-- NOTE: github_issue_url was removed (#7735) — it was never
 		-- populated or read by any INSERT/SELECT/UPDATE query.  The

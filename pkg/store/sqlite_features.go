@@ -20,6 +20,9 @@ func (s *SQLiteStore) CreateFeatureRequest(ctx context.Context, request *models.
 	if request.Status == "" {
 		request.Status = models.RequestStatusOpen
 	}
+	if request.TargetRepo != models.TargetRepoConsole && request.TargetRepo != models.TargetRepoDocs {
+		request.TargetRepo = models.TargetRepoConsole
+	}
 
 	_, err := s.db.ExecContext(ctx, `INSERT INTO feature_requests (id, user_id, title, description, request_type, target_repo, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		request.ID.String(), request.UserID.String(), request.Title, request.Description, string(request.RequestType),
